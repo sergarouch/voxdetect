@@ -3,39 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Voxdetect Collect</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%231c1915' width='32' height='32'/%3E%3Crect fill='%23b8432f' x='6' y='8' width='4' height='16'/%3E%3Crect fill='%23f4f0e6' x='14' y='12' width='4' height='8'/%3E%3Crect fill='%23f4f0e6' x='22' y='6' width='4' height='20'/%3E%3C/svg%3E">
+  <title>Voxdetect</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%2307080d' width='32' height='32'/%3E%3Crect fill='%23ff6a00' x='6' y='8' width='4' height='16'/%3E%3Crect fill='%23ffb067' x='14' y='12' width='4' height='8'/%3E%3Crect fill='%23fff4ea' x='22' y='6' width='4' height='20'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="mast">
-    <p class="brand">Voxdetect <span>Collect</span></p>
-    <p class="catalog-no">Anonymous catalog</p>
+    <p class="brand">VOX<span>DETECT</span></p>
+    <p class="catalog-no">ANON</p>
   </header>
 
   <main>
     <section class="intro">
-      <h1>Lend a few seconds of sound.</h1>
-      <p class="deck">This page collects clips for a community voice detector. Silence, noise, English, and other languages are stored as different labels, so they do not get mixed together later.</p>
-      <ul class="promises">
-        <li>No account, no email, and no name field.</li>
-        <li>Your original filename is thrown away. Clips are numbered, not named.</li>
-        <li>Nothing you send is played back to the next visitor.</li>
-      </ul>
+      <h1>4 seconds.</h1>
+      <p class="deck">No name. No account.</p>
     </section>
 
     <section class="guide" aria-labelledby="guide-title">
-      <h2 id="guide-title">How to record each sound</h2>
-      <p>This page is public to anyone with the link. No account. Pick one category, follow its steps, record four seconds, listen, then submit. The category you pick is the label that gets stored.</p>
+      <h2 id="guide-title">Record</h2>
       <div id="howto" class="howto-grid">
-        <p class="hint">Loading the recording steps…</p>
+        <p class="hint">Loading…</p>
       </div>
     </section>
 
     <section class="studio" id="studio" aria-busy="true">
-      <p id="loading">Loading the label sheet…</p>
+      <p id="loading">Loading…</p>
       <div id="workspace" hidden>
-        <h2>Record a clip</h2>
         <div class="tasks" role="group" aria-label="Label">
           <button type="button" class="task" data-label="silence" aria-pressed="false"><span>01</span>Silence</button>
           <button type="button" class="task" data-label="noise" aria-pressed="false"><span>02</span>Noise</button>
@@ -47,36 +43,35 @@
 
         <div id="capture" class="capture" hidden>
           <div class="capture-actions">
-            <button type="button" id="record" class="primary">Record 4 seconds</button>
+            <button type="button" id="record" class="primary">Record 4s</button>
             <label class="upload">
-              Upload a clip
+              Upload
               <input id="file" type="file" accept="audio/*,video/webm">
             </label>
           </div>
-          <p id="capture-status" class="hint">The browser is asked not to clean up the sound, so silence stays silent and noise stays noisy.</p>
+          <p id="capture-status" class="hint">4s.</p>
           <canvas id="meter" width="640" height="48" aria-hidden="true"></canvas>
           <audio id="preview" controls hidden></audio>
         </div>
 
         <label class="consent">
           <input id="consent" type="checkbox">
-          <span>I will not say my name, phone number, address, or anyone else’s. This clip may be used to train the community voice detector, and it is stored without my name.</span>
+          <span>No names. OK to train on this clip.</span>
         </label>
 
         <pre id="card" class="card" aria-label="Label that will be stored"></pre>
         <p id="form-error" class="error" role="alert" hidden></p>
         <div class="send-row">
-          <button type="button" id="submit" class="primary" disabled>Submit anonymously</button>
-          <button type="button" id="reset" class="quiet" hidden>Discard this take</button>
+          <button type="button" id="submit" class="primary" disabled>Send</button>
+          <button type="button" id="reset" class="quiet" hidden>Discard</button>
         </div>
-        <p id="send-hint" class="hint">Choose a label to begin.</p>
+        <p id="send-hint" class="hint">Pick one.</p>
         <div id="receipt" class="receipt" hidden></div>
       </div>
     </section>
 
     <section class="stats" aria-labelledby="stats-title">
-      <h2 id="stats-title">Catalog so far</h2>
-      <p class="hint">Counts only. Clips are not listed.</p>
+      <h2 id="stats-title">Count</h2>
       <dl id="stats">
         <div><dt>Total</dt><dd>—</dd></div>
       </dl>
@@ -84,7 +79,7 @@
   </main>
 
   <footer>
-    <p>Four seconds is the target length. Uploads must be between 0.3 and 15 seconds. Share this page’s address with your community. Anyone with the address can contribute. Nobody can browse the recordings here.</p>
+    <p>4s. No playback.</p>
   </footer>
   <script src="/static/app.js"></script>
 </body>

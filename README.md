@@ -28,12 +28,7 @@ voxdetect collect --host 0.0.0.0 --port 8741
 
 Open `http://127.0.0.1:8741` and share that address with contributors. On another computer, use this machine’s address and the same port, for example `http://192.168.1.20:8741`. The page is public to anyone with the link: no account and no name field. It discards the original filename, does not play clips back to other visitors, and does not write addresses into the catalog.
 
-The page lists these recording steps for each category:
-
-- **Silence.** Set the device down in a quiet spot, record four seconds without speaking or tapping, and discard the take if a voice or a loud machine gets in.
-- **Noise.** Pick a kind first (room, traffic, music, typing, crowd, appliance, outdoors, or other), point the mic at that sound, and do not talk over it. If words are audible, it does not belong here.
-- **English.** Read only the sentence on the page, about an arm’s length from the mic. Do not add a name, greeting, address, phone number, or workplace.
-- **Other language.** Choose the language, read the sentence if one is shown, otherwise say one short everyday line. Stay in that language. Choose “Not sure” if you do not know the code. Do not use this category for English.
+The page shows a short record step for each category: set the device down and do not speak; point at noise and discard it if you hear words; read the English line with no name; or pick another language (Not sure if you do not know the code).
 
 Each clip is one of four labels:
 

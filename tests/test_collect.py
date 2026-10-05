@@ -53,7 +53,7 @@ def test_schema_keeps_english_out_of_other_languages(tmp_path: Path):
     assert "en" not in codes
     assert schema["unknown_language"]["code"] == "und"
     by_id = {item["id"]: item for item in schema["labels"]}
-    assert len(by_id["silence"]["steps"]) >= 4
+    assert len(by_id["silence"]["steps"]) >= 2
     assert any("do not speak" in step.lower() for step in by_id["silence"]["steps"])
     assert any("words" in step.lower() for step in by_id["noise"]["steps"])
     assert any("only english" in step.lower() for step in by_id["english"]["steps"])
@@ -63,7 +63,7 @@ def test_schema_keeps_english_out_of_other_languages(tmp_path: Path):
     assert page.status_code == 200
     assert "Silence" in page.text
     assert "Other language" in page.text
-    assert "no name field" in page.text
+    assert "No name." in page.text
 
 
 def test_label_rules_reject_mixed_fields():

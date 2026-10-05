@@ -43,7 +43,7 @@ recordButton.addEventListener("click", () => {
 });
 document.querySelector("#file").addEventListener("change", (event) => {
   const file = event.target.files && event.target.files[0];
-  if (file) setBlob(file, "Uploaded clip ready to send.");
+  if (file) setBlob(file, "Ready.");
 });
 submitButton.addEventListener("click", submitClip);
 resetButton.addEventListener("click", discardTake);
@@ -64,7 +64,7 @@ async function boot() {
     renderStats(stats);
     refresh();
   } catch (_error) {
-    loading.textContent = "The label sheet did not load. Check that the collector is still running, then refresh.";
+    loading.textContent = "Reload.";
   }
 }
 
@@ -98,7 +98,7 @@ function renderDetail() {
   const spec = state.schema.labels.find((item) => item.id === state.label);
   detail.hidden = false;
   capture.hidden = false;
-  const steps = `<h3>How to record ${escapeHtml(spec.title)}</h3>${stepsHtml(spec)}`;
+  const steps = stepsHtml(spec);
   if (state.label === "silence") {
     detail.innerHTML = steps;
     return;
@@ -135,7 +135,7 @@ function renderDetail() {
   state.promptId = prompt ? prompt.id : null;
   const spoken = prompt
     ? `<p class="prompt">${escapeHtml(prompt.text)}</p>`
-    : `<p>Say one short everyday sentence. Leave out your name and where you live.</p>`;
+    : `<p>One short line. No name.</p>`;
   detail.innerHTML = `
     ${steps}
     <label>Find a language
@@ -179,7 +179,7 @@ function pickPrompt(code) {
 async function startRecording() {
   clearError();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showError("This browser cannot record. Upload a clip instead.");
+    showError("No mic. Upload instead.");
     return;
   }
   let stream;
@@ -188,7 +188,7 @@ async function startRecording() {
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
   } catch (_error) {
-    showError("Microphone permission was blocked. You can upload a clip instead.");
+    showError("Mic blocked. Upload instead.");
     return;
   }
   const mimeType = pickMimeType();
@@ -201,9 +201,9 @@ async function startRecording() {
     stream.getTracks().forEach((track) => track.stop());
     stopMeter();
     const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-    setBlob(blob, "Take ready. Listen, then submit or discard.");
+    setBlob(blob, "Ready.");
     state.recording = false;
-    recordButton.textContent = "Record 4 seconds";
+    recordButton.textContent = "Record 4s";
   });
   state.recording = true;
   recordButton.textContent = "Stop";
@@ -243,7 +243,7 @@ function startMeter(stream) {
   const draw = () => {
     analyser.getByteTimeDomainData(data);
     context.clearRect(0, 0, meter.width, meter.height);
-    context.strokeStyle = "#9c341f";
+    context.strokeStyle = "#ff6a00";
     context.lineWidth = 2;
     context.beginPath();
     const step = meter.width / data.length;
@@ -286,7 +286,7 @@ function discardTake(render) {
   preview.removeAttribute("src");
   resetButton.hidden = true;
   receipt.hidden = true;
-  captureStatus.textContent = "The browser is asked not to clean up the sound, so silence stays silent and noise stays noisy.";
+  captureStatus.textContent = "4s.";
   const file = document.querySelector("#file");
   if (file) file.value = "";
   if (render !== false) refresh();
@@ -296,10 +296,10 @@ function refresh() {
   card.textContent = JSON.stringify(labelPreview(), null, 2);
   const ready = canSubmit();
   submitButton.disabled = !ready;
-  submitButton.textContent = "Submit anonymously";
+  submitButton.textContent = "Send";
   const hint = document.querySelector("#send-hint");
-  if (!state.label) hint.textContent = "Choose a label to begin.";
-  else hint.textContent = ready ? "The card above is the label that will be stored." : blockReason();
+  if (!state.label) hint.textContent = "Pick one.";
+  else hint.textContent = ready ? "Ready." : blockReason();
 }
 
 function labelPreview() {
@@ -334,7 +334,7 @@ async function submitClip() {
   if (state.noiseKind) body.append("noise_kind", state.noiseKind);
   if (state.promptId) body.append("prompt_id", state.promptId);
   submitButton.disabled = true;
-  submitButton.textContent = "Sending…";
+  submitButton.textContent = "Sending";
   try {
     const response = await fetch("/api/submissions", { method: "POST", body });
     const payload = await readJson(response);
@@ -345,33 +345,32 @@ async function submitClip() {
   } catch (error) {
     showError(error.message || "The clip was not stored.");
     submitButton.disabled = false;
-    submitButton.textContent = "Submit anonymously";
+    submitButton.textContent = "Send";
   }
 }
 
 function blockReason() {
-  if (!state.label) return "Choose silence, noise, English, or another language.";
-  if (state.label === "noise" && !state.noiseKind) return "Choose the kind of noise.";
-  if (state.label === "non_english" && !state.language) return "Choose the language. English has its own task.";
-  if (!state.blob) return "Record or upload a clip first.";
-  if (!state.consent) return "Check the consent box. It is the only permission we store.";
-  return "The clip is not ready to send.";
+  if (!state.label) return "Pick one.";
+  if (state.label === "noise" && !state.noiseKind) return "Pick a noise.";
+  if (state.label === "non_english" && !state.language) return "Pick a language.";
+  if (!state.blob) return "Record or upload.";
+  if (!state.consent) return "Check consent.";
+  return "Not ready.";
 }
 
 function showReceipt(payload) {
   receipt.hidden = false;
-  receipt.innerHTML = `
-    <h3>Stored</h3>
-    <p>Anonymous id <span class="mono">${escapeHtml(payload.submission_id)}</span>. Label <strong>${escapeHtml(payload.label)}</strong>${payload.language ? `, language <strong>${escapeHtml(payload.language)}</strong>` : ""}${payload.noise_kind ? `, noise <strong>${escapeHtml(payload.noise_kind)}</strong>` : ""}. This page will not play it back later.</p>
-    <button type="button" id="undo" class="quiet">Remove this clip</button>
+    receipt.innerHTML = `
+    <p>Saved <span class="mono">${escapeHtml(payload.submission_id.slice(0, 8))}</span> · ${escapeHtml(payload.label)}${payload.language ? " · " + escapeHtml(payload.language) : ""}${payload.noise_kind ? " · " + escapeHtml(payload.noise_kind) : ""}</p>
+    <button type="button" id="undo" class="quiet">Remove</button>
   `;
   receipt.querySelector("#undo").addEventListener("click", async () => {
     const response = await fetch(`/api/submissions/${payload.submission_id}`, { method: "DELETE" });
     if (!response.ok) {
-      showError("Could not remove that clip.");
+      showError("Remove failed.");
       return;
     }
-    receipt.innerHTML = "<p>Removed. It is no longer in the catalog.</p>";
+    receipt.innerHTML = "<p>Removed.</p>";
     renderStats(await fetch("/api/stats").then(readJson));
   });
 }
@@ -382,7 +381,7 @@ function renderStats(stats) {
     ["Silence", stats.by_label.silence],
     ["Noise", stats.by_label.noise],
     ["English", stats.by_label.english],
-    ["Other languages", stats.by_label.non_english],
+    ["Other", stats.by_label.non_english],
   ];
   document.querySelector("#stats").innerHTML = labels.map(([name, count]) => {
     return `<div><dt>${name}</dt><dd>${count}</dd></div>`;
