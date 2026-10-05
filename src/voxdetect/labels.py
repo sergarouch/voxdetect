@@ -26,14 +26,14 @@ SAMPLE_RATE = 16000
 MAX_BYTES = 8 * 1024 * 1024
 
 NOISE_KINDS = (
-    ("room", "Room tone", "Fan, HVAC, or a quiet indoor hum. No voices."),
-    ("traffic", "Traffic", "Cars, buses, or a street. No clear words."),
-    ("music", "Music", "Music with nobody speaking."),
-    ("typing", "Typing", "Keyboard, mouse, or office clatter."),
-    ("crowd", "Crowd", "People in the distance, without words you can make out."),
-    ("appliance", "Appliance", "Kettle, washer, vacuum, or a similar machine."),
-    ("outdoors", "Outdoors", "Wind, birds, water, or weather."),
-    ("other", "Other noise", "Some other sound that is not speech."),
+    ("room", "Room tone", "Record a fan, a vent, or the hum of a quiet room. Do not let a voice in."),
+    ("traffic", "Traffic", "Stand by a street with cars or buses. Do not record a conversation."),
+    ("music", "Music", "Play music with nobody talking over it. Instrumental is best."),
+    ("typing", "Typing", "Record a keyboard or mouse. Do not narrate what you are doing."),
+    ("crowd", "Crowd", "Record people far away, where you cannot make out words."),
+    ("appliance", "Appliance", "Record a kettle, washer, vacuum, or similar machine while it is running."),
+    ("outdoors", "Outdoors", "Record wind, birds, rain, or water. Do not speak."),
+    ("other", "Other noise", "Record some other sound that is not speech, and do not describe it out loud."),
 )
 
 # Featured languages for the picker. English is intentionally absent.
@@ -119,29 +119,57 @@ LABEL_COPY = (
         "id": "silence",
         "index": "01",
         "title": "Silence",
-        "summary": "Nothing you would call a sound.",
+        "summary": "Nothing you would call a sound. No language is stored.",
         "instructions": "Set the device down and stay quiet for four seconds. Do not speak, type, or tap the microphone.",
+        "steps": [
+            "Pick a quiet corner and close the door if you can.",
+            "Put the phone or computer down. Do not hold it.",
+            "Press Record 4 seconds, then stay still. Do not speak, whisper, sigh into the mic, type, or tap the device.",
+            "Listen to the playback. You should hear almost nothing. If a voice or a loud machine got in, discard the take and record again.",
+            "Check the consent box and press Submit anonymously.",
+        ],
     },
     {
         "id": "noise",
         "index": "02",
         "title": "Noise",
-        "summary": "Sound, but nobody is speaking.",
+        "summary": "Sound, but nobody is speaking. You also pick what kind of noise it is.",
         "instructions": "Record the sound itself. Do not talk over it, and do not say what it is.",
+        "steps": [
+            "Choose the noise kind below before you record, and record only that kind.",
+            "Point the microphone at the sound, close enough that it is obvious, and away from anyone talking.",
+            "Press Record 4 seconds. Do not speak, whisper, hum, or say the name of the sound.",
+            "Listen back. If you can make out words, discard the take. This category is sound without speech.",
+            "Check the consent box and press Submit anonymously.",
+        ],
     },
     {
         "id": "english",
         "index": "03",
         "title": "English",
-        "summary": "A person speaking English.",
+        "summary": "A person speaking English. The language is stored as en.",
         "instructions": "Read the sentence aloud. Do not add your name, address, phone number, or workplace.",
+        "steps": [
+            "Use only English. To speak another language, switch to Other language.",
+            "Sit about an arm's length from the microphone and read the sentence below at a normal talking volume.",
+            "Read that sentence and nothing else. Do not say your name, a greeting, your address, your phone number, or where you work.",
+            "Press Record 4 seconds as you begin. If you finish early, stay quiet until the timer ends.",
+            "Listen back. If you stumbled or added extra words, discard the take and read it once more.",
+        ],
     },
     {
         "id": "non_english",
         "index": "04",
         "title": "Other language",
-        "summary": "Speech that is not English. The language is part of the label.",
+        "summary": "Speech that is not English. You name the language, and it stays separate from English.",
         "instructions": "Choose the language, then read the sentence if one is shown. Otherwise say one short everyday line. Do not say your name or where you live.",
+        "steps": [
+            "Choose the language you will actually speak. Do not use this category for English.",
+            "If a sentence appears, read it. If none appears, say one short everyday line in that language, such as a comment about the weather.",
+            "Stay in that one language for the whole clip. Do not say your name, phone number, address, or the name of the language.",
+            "Press Record 4 seconds as you begin. If you do not know the language code, choose Not sure at the bottom of the list.",
+            "Listen back, check the consent box, and press Submit anonymously.",
+        ],
     },
 )
 

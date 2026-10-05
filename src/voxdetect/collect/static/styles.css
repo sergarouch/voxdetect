@@ -100,6 +100,27 @@ h2 { font-size: 1.6rem; margin: 0 0 0.5rem; }
   padding: 1.25rem;
 }
 
+.howto-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.howto-card {
+  border-top: 2px solid var(--ink);
+  padding-top: 0.7rem;
+}
+
+.howto-card h3 { margin: 0; font-size: 1.25rem; }
+.howto-card .summary { margin: 0.25rem 0 0; color: var(--muted); }
+
+.steps {
+  margin: 0.45rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.steps li { margin: 0.35rem 0; }
+
 .label-sheet {
   list-style: none;
   padding: 0;
@@ -266,6 +287,10 @@ h2 { font-size: 1.6rem; margin: 0 0 0.5rem; }
 footer { padding-bottom: 3rem; }
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+@media (min-width: 800px) {
+  .howto-grid { grid-template-columns: 1fr 1fr; }
+}
 
 @media (max-width: 640px) {
   .tasks { grid-template-columns: 1fr; }

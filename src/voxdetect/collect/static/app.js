@@ -60,6 +60,7 @@ async function boot() {
     loading.hidden = true;
     workspace.hidden = false;
     document.querySelector("#studio").setAttribute("aria-busy", "false");
+    renderHowto();
     renderStats(stats);
     refresh();
   } catch (_error) {
@@ -81,12 +82,25 @@ function selectLabel(label) {
   refresh();
 }
 
+function renderHowto() {
+  const root = document.querySelector("#howto");
+  root.innerHTML = state.schema.labels.map((spec) => {
+    return `<article class="howto-card"><h3><span class="idx">${escapeHtml(spec.index)}</span> ${escapeHtml(spec.title)}</h3><p class="summary">${escapeHtml(spec.summary)}</p>${stepsHtml(spec)}</article>`;
+  }).join("");
+}
+
+function stepsHtml(spec) {
+  const items = (spec.steps || [spec.instructions]).map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+  return `<ol class="steps">${items}</ol>`;
+}
+
 function renderDetail() {
   const spec = state.schema.labels.find((item) => item.id === state.label);
   detail.hidden = false;
   capture.hidden = false;
+  const steps = `<h3>How to record ${escapeHtml(spec.title)}</h3>${stepsHtml(spec)}`;
   if (state.label === "silence") {
-    detail.innerHTML = `<p>${escapeHtml(spec.instructions)}</p>`;
+    detail.innerHTML = steps;
     return;
   }
   if (state.label === "noise") {
@@ -94,7 +108,7 @@ function renderDetail() {
       const pressed = state.noiseKind === kind.id ? "true" : "false";
       return `<button type="button" class="kind" data-kind="${kind.id}" aria-pressed="${pressed}"><strong>${escapeHtml(kind.title)}</strong><br>${escapeHtml(kind.summary)}</button>`;
     }).join("");
-    detail.innerHTML = `<p>${escapeHtml(spec.instructions)}</p><div class="choices">${kinds}</div>`;
+    detail.innerHTML = `${steps}<div class="choices">${kinds}</div>`;
     detail.querySelectorAll(".kind").forEach((button) => {
       button.addEventListener("click", () => {
         state.noiseKind = button.dataset.kind;
@@ -107,7 +121,7 @@ function renderDetail() {
   if (state.label === "english") {
     const prompt = pickPrompt("en");
     state.promptId = prompt ? prompt.id : null;
-    detail.innerHTML = `<p>${escapeHtml(spec.instructions)}</p><p class="prompt">${prompt ? escapeHtml(prompt.text) : ""}</p>`;
+    detail.innerHTML = `${steps}<p class="prompt">${prompt ? escapeHtml(prompt.text) : ""}</p>`;
     return;
   }
   const query = state.languageQuery || "";
@@ -123,7 +137,7 @@ function renderDetail() {
     ? `<p class="prompt">${escapeHtml(prompt.text)}</p>`
     : `<p>Say one short everyday sentence. Leave out your name and where you live.</p>`;
   detail.innerHTML = `
-    <p>${escapeHtml(spec.instructions)}</p>
+    ${steps}
     <label>Find a language
       <input class="search" id="language-search" value="${escapeHtml(query)}" placeholder="Spanish, 中文, sw">
     </label>

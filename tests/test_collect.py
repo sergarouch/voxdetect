@@ -52,6 +52,13 @@ def test_schema_keeps_english_out_of_other_languages(tmp_path: Path):
     codes = {language["code"] for language in schema["languages"]}
     assert "en" not in codes
     assert schema["unknown_language"]["code"] == "und"
+    by_id = {item["id"]: item for item in schema["labels"]}
+    assert len(by_id["silence"]["steps"]) >= 4
+    assert any("do not speak" in step.lower() for step in by_id["silence"]["steps"])
+    assert any("words" in step.lower() for step in by_id["noise"]["steps"])
+    assert any("only english" in step.lower() for step in by_id["english"]["steps"])
+    assert any("not sure" in step.lower() for step in by_id["non_english"]["steps"])
+    assert "fan" in next(kind["summary"].lower() for kind in schema["noise_kinds"] if kind["id"] == "room")
     page = client.get("/")
     assert page.status_code == 200
     assert "Silence" in page.text
