@@ -1,6 +1,6 @@
 # Voxdetect
 
-Voxdetect trains a small neural net to tell **human voice** from **everything else** (silence, noise, music). You point it at your recordings, it writes a train/validation/test split, and the same checkpoint scores new files.
+Voxdetect trains a small neural net to tell **human voice** from **everything else**, and it can collect anonymous clips from your community with silence, noise, English, and other languages kept as separate labels.
 
 The model is a convolutional-recurrent network on 1-second log-mel spectrograms (16 kHz mono, 64 mel bands). A clip longer than a second is scored in overlapping windows and averaged.
 
@@ -19,6 +19,46 @@ pip install -e .
 ```
 
 Use the CUDA wheel from [pytorch.org](https://pytorch.org/get-started/locally/) instead of the CPU index if you have an NVIDIA GPU. `pip install -e .` keeps that build as long as it already satisfies the `torch` requirement.
+
+## Collect clips from your community
+
+```bash
+voxdetect collect --host 0.0.0.0 --port 8741
+```
+
+Open `http://127.0.0.1:8741` and share that address (or this computer’s LAN address with the same port) with the people contributing. The page has no account and no name field. It discards the original filename, does not play clips back to other visitors, and does not write addresses into the catalog.
+
+Each clip is one of four labels:
+
+| Label | Stored when | Extra field |
+| --- | --- | --- |
+| `silence` | No distinct sound | none |
+| `noise` | Sound, but nobody is speaking | `noise_kind`: room, traffic, music, typing, crowd, appliance, outdoors, other |
+| `english` | English speech | `language` is always `en` |
+| `non_english` | Any other spoken language | `language` is an ISO 639-1 code such as `es` or `zh`, or `und` if the code is unknown |
+
+Clips land in `data/collected/`:
+
+```text
+data/collected/schema.json
+data/collected/submissions.jsonl
+data/collected/labels.csv
+data/collected/audio/silence/<id>.wav
+data/collected/audio/noise/<noise_kind>/<id>.wav
+data/collected/audio/english/<id>.wav
+data/collected/audio/non_english/<language>/<id>.wav
+```
+
+`submissions.jsonl` is the catalog. One JSON object per line, with `label`, `language`, `noise_kind`, `prompt_id`, duration, and a relative path. There is no name column.
+
+When you have at least two of the four labels, import them without collapsing the classes:
+
+```bash
+voxdetect import --collected data/collected --out data/manifests
+voxdetect train --manifests data/manifests --epochs 20 --out runs/best.pt
+```
+
+That trains a four-way model. `voxdetect infer` then prints `silence`, `noise`, `english`, or `non_english`.
 
 ## Import training data
 

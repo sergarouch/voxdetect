@@ -45,6 +45,7 @@ class ModelConfig:
     channels: tuple[int, ...] = (16, 32, 64)
     gru_hidden: int = 64
     dropout: float = 0.2
+    num_classes: int = 1
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "channels", tuple(self.channels))
@@ -63,5 +64,5 @@ class ModelConfig:
         return cls(**known)
 
     @classmethod
-    def from_audio(cls, audio: AudioConfig) -> "ModelConfig":
-        return cls(n_mels=audio.n_mels, n_frames=audio.n_frames)
+    def from_audio(cls, audio: AudioConfig, num_classes: int = 1) -> "ModelConfig":
+        return cls(n_mels=audio.n_mels, n_frames=audio.n_frames, num_classes=num_classes)

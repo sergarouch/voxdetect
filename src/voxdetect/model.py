@@ -9,11 +9,12 @@ from voxdetect.config import ModelConfig
 
 
 class VoiceCRNN(nn.Module):
-    """Log-mel CRNN that outputs one voice logit per clip.
+    """Log-mel CRNN for voice activity or the four-way collection labels.
 
     Three conv blocks pool frequency and time, a bidirectional GRU reads the
-    remaining sequence, and a linear layer produces a single logit. Apply
-    sigmoid to that logit for a voice probability.
+    remaining sequence, and a linear layer produces logits. One class is a
+    voice logit (apply sigmoid). Four classes follow silence, noise, english,
+    non_english (apply softmax).
     """
 
     def __init__(self, config: ModelConfig) -> None:
@@ -47,7 +48,7 @@ class VoiceCRNN(nn.Module):
         )
         self.head = nn.Sequential(
             nn.Dropout(config.dropout),
-            nn.Linear(config.gru_hidden * 2, 1),
+            nn.Linear(config.gru_hidden * 2, config.num_classes),
         )
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
@@ -58,4 +59,7 @@ class VoiceCRNN(nn.Module):
         sequence = encoded.permute(0, 3, 1, 2).reshape(batch, time, channels * freq)
         recurrent, _hidden = self.gru(sequence)
         pooled = recurrent.mean(dim=1)
-        return self.head(pooled).squeeze(-1)
+        logits = self.head(pooled)
+        if self.config.num_classes == 1:
+            return logits.squeeze(-1)
+        return logits

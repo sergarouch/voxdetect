@@ -29,6 +29,10 @@ class VoiceDataset(Dataset):
         self.train = train
         self.extractor = LogMelExtractor(self.config)
         self.extractor.eval()
+        named = [bool(row.label_name) for row in self.rows]
+        if any(named) and not all(named):
+            raise ValueError("Manifest mixes speech/non-speech labels with silence/noise/english/non_english labels.")
+        self.multiclass = all(named)
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -39,5 +43,6 @@ class VoiceDataset(Dataset):
         waveform = crop_or_pad(waveform, self.config.clip_samples, randomize=self.train)
         with torch.no_grad():
             features = self.extractor(waveform)
-        label = torch.tensor(row.label, dtype=torch.float32)
+        dtype = torch.long if self.multiclass else torch.float32
+        label = torch.tensor(row.label, dtype=dtype)
         return features.detach(), label

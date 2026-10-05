@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from voxdetect.config import AudioConfig, ModelConfig
 from voxdetect.dataset import VoiceDataset
-from voxdetect.metrics import binary_metrics, format_metrics
+from voxdetect.metrics import binary_metrics, format_metrics, multiclass_metrics
 from voxdetect.model import VoiceCRNN
 
 
@@ -33,8 +33,10 @@ def evaluate(checkpoint: str | Path, manifest: str | Path, batch_size: int = 16,
     model, audio_config, blob = load_checkpoint(checkpoint, device)
     cutoff = blob.get("threshold", 0.5) if threshold is None else threshold
     dataset = VoiceDataset(manifest, audio_config, train=False)
+    if (model.config.num_classes > 1) != dataset.multiclass:
+        raise ValueError("The checkpoint label scheme does not match this manifest.")
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss() if dataset.multiclass else nn.BCEWithLogitsLoss()
     logits: list[torch.Tensor] = []
     labels: list[torch.Tensor] = []
     losses: list[float] = []
@@ -46,7 +48,12 @@ def evaluate(checkpoint: str | Path, manifest: str | Path, batch_size: int = 16,
             losses.append(float(criterion(batch_logits, batch_labels)))
             logits.append(batch_logits.cpu())
             labels.append(batch_labels.cpu())
-    metrics = binary_metrics(torch.cat(logits), torch.cat(labels), threshold=cutoff)
+    stacked = torch.cat(logits)
+    truth = torch.cat(labels)
+    if dataset.multiclass:
+        metrics = multiclass_metrics(stacked, truth)
+    else:
+        metrics = binary_metrics(stacked, truth, threshold=cutoff)
     metrics["loss"] = sum(losses) / max(len(losses), 1)
     print(f"{manifest}: loss {metrics['loss']:.4f}  {format_metrics(metrics)}  n {int(metrics['count'])}")
     return metrics

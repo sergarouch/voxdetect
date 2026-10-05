@@ -9,6 +9,7 @@ import torch
 from voxdetect.audio import AUDIO_EXTENSIONS, iter_windows, load_audio
 from voxdetect.evaluate import load_checkpoint
 from voxdetect.features import LogMelExtractor
+from voxdetect.labels import CLASS_ORDER
 
 
 def score_file(
@@ -16,15 +17,17 @@ def score_file(
     extractor: LogMelExtractor,
     path: Path,
     device: torch.device,
-) -> float:
-    """Mean voice probability across 1-second windows with a 0.5 second hop."""
+) -> torch.Tensor:
+    """Mean probability for each class across 1-second windows with a 0.5 second hop."""
     config = extractor.config
     waveform = load_audio(path, config.sample_rate)
     windows = iter_windows(waveform, config.clip_samples, max(1, config.clip_samples // 2))
     batch = torch.stack([extractor(window).squeeze(0) for window in windows]).to(device)
     with torch.no_grad():
         logits = model(batch)
-    return float(torch.sigmoid(logits).mean())
+    if getattr(model.config, "num_classes", 1) == 1:
+        return torch.sigmoid(logits).mean().reshape(1)
+    return torch.softmax(logits, dim=-1).mean(dim=0)
 
 
 def infer_paths(
@@ -41,14 +44,29 @@ def infer_paths(
     if not paths:
         raise FileNotFoundError(f"No audio files at {audio}")
 
+    names = list(blob.get("label_names") or CLASS_ORDER)
+    multiclass = model.config.num_classes > 1
     results: list[tuple[Path, float, str]] = []
     for path in paths:
-        probability = score_file(model, extractor, path, device)
-        label = "speech" if probability >= cutoff else "non_speech"
+        probabilities = score_file(model, extractor, path, device)
+        if multiclass:
+            index = int(probabilities.argmax())
+            label = names[index] if index < len(names) else str(index)
+            probability = float(probabilities[index])
+            breakdown = "  ".join(f"{name} {float(probabilities[i]):.2f}" for i, name in enumerate(names))
+            print(f"{label:12}  {probability:.3f}  {breakdown}  {path}")
+        else:
+            probability = float(probabilities[0])
+            label = "speech" if probability >= cutoff else "non_speech"
+            print(f"{probability:.3f}  {label:10}  {path}")
         results.append((path, probability, label))
-        print(f"{probability:.3f}  {label:10}  {path}")
-    speech = sum(label == "speech" for _path, _prob, label in results)
-    print(f"{speech} speech, {len(results) - speech} non_speech, threshold {cutoff:.2f}")
+    if multiclass:
+        counts = {name: sum(label == name for _path, _prob, label in results) for name in names}
+        rendered = ", ".join(f"{name} {count}" for name, count in counts.items())
+        print(rendered)
+    else:
+        speech = sum(label == "speech" for _path, _prob, label in results)
+        print(f"{speech} speech, {len(results) - speech} non_speech, threshold {cutoff:.2f}")
     return results
 
 

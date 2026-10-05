@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import random
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -21,6 +22,9 @@ class ClipRow:
     label: int
     duration_sec: float
     sample_rate: int
+    label_name: str = ""
+    language: str = ""
+    noise_kind: str = ""
 
 
 class DatasetImportError(Exception):
@@ -39,33 +43,51 @@ class ImportReport:
         return [*self.train, *self.val, *self.test]
 
     def summary(self) -> str:
-        lines = [
-            f"Accepted {len(self.accepted())} clips "
-            f"(speech { _count(self.accepted(), 1) }, non_speech {_count(self.accepted(), 0)}).",
-            f"Rejected {len(self.rejected)} files.",
-        ]
+        accepted = self.accepted()
+        if any(row.label_name for row in accepted):
+            lines = [f"Accepted {len(accepted)} clips."]
+            from voxdetect.labels import CLASS_ORDER
+
+            for name in CLASS_ORDER:
+                lines.append(f"  {name}: {sum(row.label_name == name for row in accepted)}")
+            languages = Counter(row.language for row in accepted if row.label_name == "non_english" and row.language)
+            if languages:
+                rendered = ", ".join(f"{code} {count}" for code, count in sorted(languages.items()))
+                lines.append(f"  non_english languages: {rendered}")
+        else:
+            lines = [
+                f"Accepted {len(accepted)} clips "
+                f"(speech {_count(accepted, 1)}, non_speech {_count(accepted, 0)})."
+            ]
+        lines.append(f"Rejected {len(self.rejected)} files.")
         reasons: dict[str, int] = {}
         for _path, reason in self.rejected:
             category = reason.split(":", 1)[0]
             reasons[category] = reasons.get(category, 0) + 1
         for reason, count in sorted(reasons.items()):
             lines.append(f"  {reason}: {count}")
+        named = any(row.label_name for row in accepted)
         for name, rows in (("train", self.train), ("val", self.val), ("test", self.test)):
-            lines.append(
-                f"{name}: {len(rows)} (speech {_count(rows, 1)}, non_speech {_count(rows, 0)})"
-            )
+            if named:
+                parts = ", ".join(
+                    f"{label} {sum(row.label_name == label for row in rows)}"
+                    for label in sorted({row.label_name for row in rows})
+                )
+                lines.append(f"{name}: {len(rows)}" + (f" ({parts})" if parts else ""))
+            else:
+                lines.append(f"{name}: {len(rows)} (speech {_count(rows, 1)}, non_speech {_count(rows, 0)})")
         if self.out_dir is not None:
             lines.append(f"Manifests written to {self.out_dir}")
-        accepted = self.accepted()
         if accepted:
-            majority = max(_count(accepted, 1), _count(accepted, 0)) / len(accepted)
-            if majority >= 0.9:
+            counts = Counter(row.label_name or str(row.label) for row in accepted)
+            if max(counts.values()) / len(accepted) >= 0.9:
                 lines.append(
                     "Warning: one class is at least 90% of the clips. "
                     "Accuracy can look high while the model ignores the smaller class."
                 )
         for name, rows in (("val", self.val), ("test", self.test)):
-            if rows and (_count(rows, 0) == 0 or _count(rows, 1) == 0):
+            present = {row.label for row in rows}
+            if rows and len(present) < 2:
                 lines.append(f"Note: {name} contains only one class, so metrics on it will be thin.")
         return "\n".join(lines)
 
@@ -136,6 +158,52 @@ def import_dataset(
     )
 
 
+def import_collected(
+    root: str | Path,
+    out_dir: str | Path = "data/manifests",
+    seed: int = 42,
+) -> ImportReport:
+    """Turn a collection catalog into train/val/test manifests with the four labels kept apart."""
+    from voxdetect.collect.store import load_catalog
+    from voxdetect.labels import class_index
+
+    catalog, problems = load_catalog(Path(root))
+    rejected = [(str(record.get("path") or record.get("submission_id") or ""), reason) for record, reason in problems]
+    rows = [
+        ClipRow(
+            path=record["absolute_path"],
+            label=class_index(record["label"]),
+            duration_sec=float(record.get("duration_sec") or 0),
+            sample_rate=int(record.get("sample_rate") or 0),
+            label_name=str(record["label"]),
+            language=str(record.get("language") or ""),
+            noise_kind=str(record.get("noise_kind") or ""),
+        )
+        for record in catalog
+    ]
+    present = {row.label_name for row in rows}
+    if len(present) < 2:
+        found = ", ".join(sorted(present)) or "none"
+        report = ImportReport(rejected=rejected)
+        raise DatasetImportError(
+            "Need at least two of silence, noise, english, and non_english before training.\n"
+            f"Found: {found}.\n" + report.summary()
+        )
+    splits = _split(rows, seed)
+    destination = Path(out_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in ("train", "val", "test"):
+        _write_manifest(destination / f"{name}.csv", splits[name])
+    _write_rejected(destination / "rejected.csv", rejected)
+    return ImportReport(
+        train=splits["train"],
+        val=splits["val"],
+        test=splits["test"],
+        rejected=rejected,
+        out_dir=destination.resolve(),
+    )
+
+
 def read_manifest(path: str | Path) -> list[ClipRow]:
     manifest = Path(path)
     if not manifest.is_file():
@@ -154,6 +222,9 @@ def read_manifest(path: str | Path) -> list[ClipRow]:
                     label=int(record["label"]),
                     duration_sec=float(record.get("duration_sec") or 0),
                     sample_rate=int(record.get("sample_rate") or 0),
+                    label_name=record.get("label_name") or "",
+                    language=record.get("language") or "",
+                    noise_kind=record.get("noise_kind") or "",
                 )
             )
     return rows
@@ -250,7 +321,7 @@ def _label_from_parents(path: Path, root: Path) -> int | None:
 
 
 def _split(rows: list[ClipRow], seed: int) -> dict[str, list[ClipRow]]:
-    groups: dict[int, list[ClipRow]] = {0: [], 1: []}
+    groups: dict[int, list[ClipRow]] = defaultdict(list)
     for row in rows:
         groups[row.label].append(row)
     rng = random.Random(seed)
@@ -282,18 +353,24 @@ def _split_counts(count: int) -> tuple[int, int, int]:
 
 
 def _write_manifest(path: Path, rows: list[ClipRow]) -> None:
+    fields = MANIFEST_FIELDS
+    if any(row.label_name for row in rows):
+        fields = (*MANIFEST_FIELDS, "label_name", "language", "noise_kind")
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=MANIFEST_FIELDS)
+        writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for row in rows:
-            writer.writerow(
-                {
-                    "path": row.path,
-                    "label": row.label,
-                    "duration_sec": f"{row.duration_sec:.4f}",
-                    "sample_rate": row.sample_rate,
-                }
-            )
+            payload = {
+                "path": row.path,
+                "label": row.label,
+                "duration_sec": f"{row.duration_sec:.4f}",
+                "sample_rate": row.sample_rate,
+            }
+            if "label_name" in fields:
+                payload["label_name"] = row.label_name
+                payload["language"] = row.language
+                payload["noise_kind"] = row.noise_kind
+            writer.writerow(payload)
 
 
 def _write_rejected(path: Path, rejected: list[tuple[str, str]]) -> None:
